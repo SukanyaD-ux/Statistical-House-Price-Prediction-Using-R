@@ -1,0 +1,485 @@
+---
+title: "MA334-SP-7 Final Project (2023-24)"
+output: pdf_document
+author: "Sukanya Das (2321248)"
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = FALSE, include = F)
+rm(list = ls())
+```
+
+## 1. Data Exploration
+
+## Summary of the dataset
+
+```{r Load Dataset, include=FALSE}
+# tinytex::install_tinytex()
+# Read in your dataset. This should be saved to the SAME folder as your .Rmd file.
+filename <- "MA334-SP-7_DAS_SUKANYA_ARUNDHATI_2321248.csv"
+dataset <- read.csv(filename)
+```
+
+```{r Variables Summary}
+# Summary of Variables
+variables_total <- ncol(dataset)
+observations_total <- nrow(dataset)
+name_variables <- names(dataset)
+type_variables <- sapply(dataset, class)
+```
+
+The housing dataset used represents the factors affecting house prices in the USA (Baton Rouge, Louisiana). It includes a total of `r variables_total` variables and `r observations_total` observations, both qualitative and quantitative.
+
+-   Qualitative variables that represent categories are pool, style, fireplace, and waterfront. If the house has a pool, it's a 1 or else 0, and the same goes for a fireplace and waterfront. The style of the house is differentiated based on certain criteria, such as Traditional, Townhouse, Ranch, New Orleans etc.
+
+-   Quantitative variable that represent quantities are price, sqft, bedrooms, baths, age, and dom.
+
+## Descriptive Statistics
+
+```{r, Verify Dataset using Boxplot}
+# Plot to check if there's any outliers, no need to display this plot
+boxplot(dataset$price, dataset$sqft, dataset$age, dataset$dom,
+        boxwex = 0.6,
+        height = 0.8,
+        main = "Boxplot (Original Dataset)",
+        names = c("Price", "Sqft", "Age", "Dom"),
+        xlab = "Variables",
+        ylab = "Value",
+        width = c(1, 1, 1, 1))
+```
+
+```{r Remove Outliers}
+# Check minimum and maximum price in orignal dataset
+min(dataset$price)
+max(dataset$price)
+
+# Sort the original dataset by price
+sorted_dataset <- dataset[order(dataset$price), ]
+
+# Set a trim percentage and get trim count for top and bottom
+trim_percent <- 0.018 
+top_rows_trim <- round(trim_percent * nrow(sorted_dataset))
+bottom_rows_trim <- round(trim_percent * nrow(sorted_dataset))
+
+# Create a new dataset by trimming extreme values
+trimmed_dataset <- sorted_dataset[(top_rows_trim + 1):(nrow(sorted_dataset) - bottom_rows_trim), ]
+
+# Check minimum and maximum price in trimmed dataset
+min(trimmed_dataset$price)
+max(trimmed_dataset$price)
+```
+
+```{r Final Boxplots,include=T}
+# Set the area to plot original and trimmed boxplots side by side to display
+par(mfrow = c(1, 2), mar = c(5, 5, 4, 2))
+
+# Original dataset boxplot
+boxplot(dataset$price, dataset$sqft, dataset$age, dataset$dom,
+        boxwex = 0.6,
+        height = 0.8,
+        main = "Housing Data Boxplot (Original)",
+        names = c("Price", "Sqft", "Age", "Dom"),
+        width = c(1, 1, 1, 1),
+        col = c("slategray3","slategray2","slategray4","gray"),
+        xlab = "Variables",
+        ylab = "Values",
+        cex.main = 0.8,
+        cex.axis = 0.8)
+
+# Trimmed dataset boxplot
+boxplot(trimmed_dataset$price, trimmed_dataset$sqft, trimmed_dataset$age, trimmed_dataset$dom,
+        boxwex = 0.6,
+        height = 0.8,
+        main = "Housing Data Boxplot (Trimmed)",
+        names = c("Price", "Sqft", "Age", "Dom"),
+        width = c(1, 1, 1, 1),
+        col = c("slategray3","slategray2","slategray4","gray"),
+        cex.main = 0.8,
+        cex.axis = 0.8,
+        xlab = "Variables",
+        ylab = "Values",
+        ylim = c(0, max(trimmed_dataset$price)), 
+        yaxt = "n")
+
+# Get the axis breaks and labels for price axis
+breaks <- pretty(trimmed_dataset$price)
+labels <- format(breaks / 100, scientific = FALSE, big.mark = ",")  
+
+# Add custom labels to y-axis
+axis(2, at = breaks, labels = labels)
+
+# Reset the layout to default
+par(mfrow = c(1, 1))
+```
+
+As shown in the above boxplot "Housing Data Boxplot(Original)", there are extreme values or outliers for the price variable. These outliers are removed from the original dataset as shown in "Housing Data Boxplot(Trimmed)" and a new dataset named "trimmed_dataset" is created, which is used in all the subsequent scenarios.
+
+```{r Descriptive Statistics, include=TRUE}
+trimmedmean_price <- mean(trimmed_dataset$price, trim=0.1) 
+median_price <- median(trimmed_dataset$price)
+sd_price <- sd(trimmed_dataset$price)
+
+mean_sqft <- round(mean(trimmed_dataset$sqft),2) 
+median_sqft <- median(trimmed_dataset$sqft)
+sd_sqft <- round(sd(trimmed_dataset$sqft),2)
+
+mean_age <- mean(trimmed_dataset$age) 
+median_age <- median(trimmed_dataset$age)
+sd_age <- sd(trimmed_dataset$age)
+
+mean_dom <- mean(trimmed_dataset$dom) 
+median_dom <- median(trimmed_dataset$dom)
+sd_dom <- sd(trimmed_dataset$dom)
+```
+
+For descriptive statistics, the mean, median and standard deviation of price, sqft, age, and dom are calculated, and below are the observations:
+
+-   In this scenario, a trimmed mean price is considered, which is marginally higher than the median, indicating that the price distribution is skewed to the right. The high standard deviation indicates that there's a variation in housing prices, with some values being much higher or lower than the mean.
+
+-   The median of the sqft shows that half of the properties have a size less than or equal to the mean, while the rest of the half have a size greater than or equal to the mean. The standard deviation indicates that there's a moderate variation in the house's size.
+
+-   There's a slight skewness towards newer properties as the mean age is slightly higher than the median. The standard deviation represents that there's a variation in the age of houses, with some being significantly older or newer than the average.
+
+-   There's a right skewed distribution of length of time on the market, as per the calculated mean, which is higher than the median. The standard deviation shows that there's a significant range in the amount of time for houses to sell, where some properties are selling quite quickly, while others are taking longer than expected.
+
+| Housing Variables     | Mean                          | Median                   | Standard Deviation   |
+|------------------|-------------------|------------------|------------------|
+| Price (in dollars)    | `r format(trimmedmean_price)` | `r format(median_price)` | `r format(sd_price)` |
+| Sqft (in square feet) | `r round(mean_sqft,2)`        | `r median_sqft`          | `r round(sd_sqft,2)` |
+| Age (in years)        | `r round(mean_age,2)`         | `r median_age`           | `r round(sd_age,2)`  |
+| Dom (in days)         | `r round(mean_dom,2)`         | `r median_dom`           | `r round(sd_dom,2)`  |
+
+## Plots
+
+Suitable plots are generated to represent the distributions of the variables.
+
+-   Price distribution indicates that the majority of the properties lie in the price range below 215556(in dollars). It also suggests that the high frequency of lower-priced properties is grouped towards the left side of the graph.
+
+-   Sqft distribution shows that the highest frequency of properties is observed around the lower to middle sqft range, which decreases as the square feet increase.
+
+-   Bedrooms distribution represents that the majority of the property has three bedrooms, followed by four and then two.
+
+-   Baths distribution indicates that houses with two bathrooms are the most common, and there's a drop in the frequency as the number of bathrooms increases.
+
+-   Age distribution shows that with older properties, the frequency decreases. Also, newer properties are located, with a high frequency for houses that are around 10 years.
+
+```{r Data Visualization,include=T}
+# Data Visualization
+par(mfrow = c(2, 3))
+
+# Price Distribution
+breaks_price <- seq(min(trimmed_dataset$price), max(trimmed_dataset$price), length.out = 10)
+# Format breaks
+format_breaks <- format(round(breaks_price, digits = 0), scientific = FALSE)
+# Create the histogram using price break
+hist(trimmed_dataset$price,  breaks = breaks_price, main = "House Price Distribution", xlab = "Price",col = 'cadetblue3',xaxt = "n")
+# Format x-axis
+axis(1, at = breaks_price, labels = format_breaks)
+
+# Sqft Distribution
+hist(trimmed_dataset$sqft, main = "Total Area Distribution", xlab = "Sqft", col = 'steelblue3')
+
+# Bedrooms Distribution
+hist(trimmed_dataset$bedrooms, main = "Bedrooms Distribution", xlab = "Bedrooms",col = 'olivedrab')
+
+# Baths Distribution
+hist(trimmed_dataset$baths, main = "Baths Distribution", xlab = "Baths",col = 'lightblue')
+
+# Age Distribution
+hist(trimmed_dataset$age, main = "Age Distribution", xlab = "Age", col = 'darkgreen')
+```
+
+## Correlation
+
+```{r Correlations}
+# Correlations
+corr_price_sqft <- round(cor(trimmed_dataset$price, trimmed_dataset$sqft),2)
+corr_price_sqft
+
+corr_age_dom <- round(cor(trimmed_dataset$age, trimmed_dataset$dom),2)
+corr_age_dom
+
+corr_price_dom <- round(cor(trimmed_dataset$price, trimmed_dataset$dom),2)
+corr_price_dom
+```
+
+The following observations are made after calculating the correlations between some of the variables.
+
+-   The correlation between price and sqft is `r corr_price_sqft`, which shows that there's a strong positive linear relationship between these variables. This implies that the variation in the total area is linked to a comparatively steady variation in the house's price.
+
+-   The correlation between age and dom is `r corr_age_dom`, which represents a very weak linear relationship. This suggests that there may be a slight tendency for newer houses to spend less time on the market.
+
+-   The correlation between price and dom is `r corr_price_dom`, which shows a weak positive correlation. There could be a little tendency for higher house prices to be linked with slightly longer days on the market, or the other way around.
+
+## 2. Probability, probability distributions and confidence intervals
+
+```{r Probability and Conditional Probability}
+# Calculate the probability of a pool
+pool_prob <- round(sum(trimmed_dataset$pool) / nrow(trimmed_dataset),2)
+# Calculate conditional probability for both fireplace and pool
+fireplace_pool_prob <- round(sum(trimmed_dataset$fireplace & trimmed_dataset$pool) / sum(trimmed_dataset$pool),2)
+```
+
+Probability of having a pool is `r pool_prob` and conditional probability of having a fireplace given a pool is `r fireplace_pool_prob`.
+
+```{r Probability using dbinom function}
+# Calculate probability of having at least 3 pools out of 10 houses
+atleast_3_pools <- round(sum(dbinom(3:10, 10, pool_prob)),2)
+```
+
+Based on the probability of a pool, 'dbinom' determines the probability of having precisely 3, 4, 5, up to 10 houses with a pool out of a sample size of 10 houses. The sum is used to obtain the total probability with at least 3 pools out of 10 properties. Thus, the probability of having at least 3 pools out of 10 houses is `r atleast_3_pools`.
+
+```{r Confidence Interval}
+# Get the mean, standard deviation, and sample size
+mean_houseprice <- mean(trimmed_dataset$price)
+sd_houseprice <- sd(trimmed_dataset$price)
+n <- length(trimmed_dataset$price)
+
+# Get the critical value for 95% confidence interval
+z <- qt(0.975, df = n - 1)
+# Get the marginal error
+marginal_err <- z * (sd_houseprice / sqrt(n))
+
+# Confidence interval
+lower_bound <- format(mean_houseprice - marginal_err)
+upper_bound <- format(mean_houseprice + marginal_err)
+
+# Print the confidence interval
+CI <- c(lower_bound, upper_bound)
+```
+
+The 95% confidence interval on the mean house price in the USA is [`r CI`] (in \$).
+
+## 3. Contingency tables and hypothesis tests
+
+## Hypothesis Test
+
+```{r Hypothesis Test}
+p_low  <- "We reject H0, as the mean house price is greater for houses on the waterfront."
+p_high <- "We accept the NULL hypothesis, as we do not have evidence to suggest that the mean house price is greater for houses on the waterfront."
+
+t_test <- t.test(price ~ waterfront, trimmed_dataset, alternative = "greater")
+p_value_t <- round(t_test$p.value,2)
+
+if(t_test$p.value < 0.05){p_low}else{p_high}
+```
+
+A hypothesis test is performed using a 5% significance level that the mean house price (over all house styles) is greater if a house is on the waterfront. In this scenario, a two-sample t-test is used to conclude the result.
+
+Furthermore, the Null hypothesis: the mean house price is the same for both waterfront and non-waterfront houses, and the Alternative hypothesis: the mean house price (over all house styles) is greater if a house is on the waterfront, are considered.
+
+Based on the result, i.e., \~`r p_value_t`, we can accept the null hypothesis as there's not enough evidence to suggest that the mean house price is greater for houses on the waterfront compared to the non-waterfront houses.
+
+## Contingency table
+
+```{r Contingency table,include=F}
+# Create contingency table
+table_pool_fireplace <- table(trimmed_dataset$pool,trimmed_dataset$fireplace)
+
+# Get relative frequencies for the entire contingency table
+rel_freq_tab <- prop.table(table_pool_fireplace)
+
+# Row and column names
+colnames(rel_freq_tab) <- c("No Fireplace", "Fireplace")
+rownames(rel_freq_tab) <- c("No Pool", "Pool")
+
+rel_freq_tab
+
+# Get rows and columns to populate in data in the table
+frq1 <- rel_freq_tab[1,1]
+frq2 <- rel_freq_tab[1,2]
+frq3 <- rel_freq_tab[2,1]
+frq4 <- rel_freq_tab[2,2]
+```
+
+Contingency Table showing relative frequencies for "Pool" and "No pool" according to whether a house has or hasn’t got a fireplace.
+
+| Parameters | No Fireplace      | Fireplace         |
+|------------|-------------------|-------------------|
+| No Pool    | `r round(frq1,2)` | `r round(frq2,2)` |
+| Pool       | `r round(frq3,2)` | `r round(frq4,2)` |
+
+## Test for Fireplace and Pool's Independence
+
+```{r Independence Test}
+# Perform chi-square test
+chi_sq_test <- chisq.test(trimmed_dataset$pool, trimmed_dataset$fireplace)
+
+low <- "We reject the null hypothesis,as there's prove that the fireplace is not independent of whether it has a pool."
+high <- "We accept the null hypothesis, as there's not enough evidence to suggest that a fireplace is not independent of whether it has a pool."
+p_value_chi <- round(chi_sq_test$p.value,2)
+
+# Interpret the result
+if (chi_sq_test$p.value < 0.05) {low}else {high}
+```
+
+Using a 5% significance level, a test has been conducted to show whether a house with a fireplace is independent of whether it has a pool. For this purpose, Pearson's chi-squared test is used to conclude the result.
+
+Also, the Null hypothesis that the fireplace is independent of the existence of a pool and the Alternative hypothesis that the fireplace is not independent of whether it has a pool are considered.
+
+Based on the result, i.e., \~`r p_value_chi`, we can reject the null hypothesis as there's enough evidence to prove that the fireplace is not independent of the presence of a pool.
+
+## 4. Simple Linear Regression
+
+```{r Normality Check,include=T,fig.width= 8}
+par(mar = c(9, 9, 9, 9),cex = 0.7)
+# Check for normality, we can see that the data is already normalized
+trimmed_dataset$ln_price <- log(trimmed_dataset$price)
+qqnorm(trimmed_dataset$ln_price, col = "blue4")
+qqline(trimmed_dataset$ln_price, col="red3",lwd = 2)
+```
+
+From the above graph, we can observe that the data is almost normalized. So, both the Linear Regression can be performed based on this assumption.
+
+```{r Simple Linear Regression}
+# Simple linear regression
+linear_model <- lm(log(price) ~ log(sqft), trimmed_dataset)
+
+# Summary of the model
+lm <- summary(linear_model)
+
+# Get intercept values
+est_intval <- round(lm$coefficients[1,1],2)
+er_intval <- round(lm$coefficients[1,2],2)
+t_intval <- round(lm$coefficients[1,3],2)
+p_intval <- format(lm$coefficients[1,4])
+
+# Get ln(sqft) values
+est_sqval <- round(lm$coefficients[2,1],2)
+er_sqval <- round(lm$coefficients[2,2],2)
+t_sqval <- round(lm$coefficients[2,3],2)
+p_sqval <- format(lm$coefficients[2,4])
+```
+
+Note : In R, log() can be used to compute the natural logarithm (ln) of a numeric value. The default base for the log() function in R is "e".
+
+Total area significance: As shown below, it can be observed that the total area is a significant predictor of house price at a 5% significance level. The small p-value of the total area related with the coefficient estimate implies that the predictor variable is highly significant.
+
+Slope Interpretation: From the below observation, slope coefficient indicates that doubling the total area is linked with \~`r est_sqval` times increase in the house's price, with all other variables unchanged. Thus, it suggests that the ln(price) increases by `r est_sqval` for each unit increase in the ln(sqft).
+
+| Parameters | Estimate       | Std. Error    | t Value      | p Value      |
+|------------|----------------|---------------|--------------|--------------|
+| Intercept  | `r est_intval` | `r er_intval` | `r t_intval` | `r p_intval` |
+| ln(sqft)   | `r est_sqval`  | `r er_sqval`  | `r t_sqval`  | `r p_sqval`  |
+
+Scatter plot represents the relationship between the total area of a house (ln(sqft)) on the x-axis and house prices (ln(price)) on the y-axis. In this plot, there’s a positive correlation between ln(sqft) and ln(price), as the slope of the fitted line is positive. This suggests that as the size of the house increases, so does its price.
+
+```{r Simple Linear Regression Plots,include=T}
+# Set up layout for the plots and adjust the margin
+par(mfcol = c(2, 2), mar = c(5, 5, 2, 2))
+# Plot the data and fitted model
+plot(log(trimmed_dataset$sqft), log(trimmed_dataset$price), main = "Scatter Plot", xlab = "ln(sqft)", ylab = "ln(price)",col = "royalblue3")
+# Fitted Line
+abline(linear_model, col = "coral1",lwd = 2)  
+
+# Plot the residuals
+residual_model <- residuals(linear_model)
+plot(log(trimmed_dataset$sqft), residual_model, main = "Residual Plot",
+     xlab = "ln(sqft)", ylab = "Residuals",col = "deepskyblue4")
+# Reference line for zero residuals
+abline(h = 0, col = "coral2",lty = 1,lwd = 2)  
+```
+
+Residual plot indicates that the residuals are randomly scattered around the zero line, which suggests that the model is quite well-fitted to the data. But the points are more dispersed for mid range values of the total area (ln(sqft)) and not much for the extreme data.
+
+In general, the plots suggest that this model is a suitable fit for this dataset. Although additional analysis may be required, the model shows that it fits well with the data.
+
+## 5. Multiple Linear Regression
+
+```{r Multiple Linear Regression}
+trimmed_dataset$ln_sqft <- log(trimmed_dataset$sqft)
+
+# Convert style (Qualitative variable)
+trimmed_dataset$style <- as.factor(trimmed_dataset$style)
+
+# Multiple Linear Regression (Full Model)
+full_model <- lm(log(price) ~ ln_sqft + bedrooms + baths + age + pool + style + fireplace + waterfront + dom, trimmed_dataset)
+# Summary of the model
+full <- summary(full_model)  
+
+ln_sqft_coeff <- round(full$coefficients[2,1],2)
+r_sq <- round(full$adj.r.squared,2)
+```
+
+Multiple linear regression of ln(price) against all the predictor variables is performed. The fitted model summary shows that the predictor variables are significantly related to the ln(price). As per the summary data, a one-unit increase in the ln(sqft) corresponds to a `r ln_sqft_coeff` increase in the ln(price). Also, other factors that have a major impact on house prices are baths, age, dom, fireplace, and style. Hence, the model shows the adjusted R-squared value `r r_sq` of the variance in house prices, suggesting a comparatively good fit. Moreover, the residuals are normally distributed and do not exhibit any systematic patterns.
+
+Afterwards, feature selection is used to produce a reduced model. Step-wise selection with the AIC method is applied in order to get the most effective subset of predictors. The direction is specified as "both" to perform both forward and backward selection.
+
+```{r Feature Selection}
+library(MASS)
+
+# Stepwise Regression used for Feature Selection
+step_model <- stepAIC(full_model, direction = "both")  
+# Summary
+summary(step_model)
+```
+
+Thereafter, using k-fold cross validation, the performance of the full and reduced models is evaluated. In this case, 10 fold cross-validation is performed to get more accurate estimate of the model performance. The performance of the full and reduced models is evaluated using Root Mean Squared Error as the performance metric. Based on the below criteria, model performance are compared:
+
+-   Model performance is better if the RMSE values are lower.
+
+-   Lower AIC values suggest a better model fit, so the model with the lower AIC value is preferred.
+
+```{r k-Fold Cross Validation}
+library(caret)
+
+# Set seed for reproducibility
+set.seed(1) 
+
+# Using 10 fold cross-validation
+train_control_cv <- trainControl(method = "cv", number = 10)  
+
+# Full Model
+model_full_cv <- train(log(price) ~ ln_sqft + bedrooms + baths + age + pool + style + fireplace + waterfront + dom, trimmed_dataset, method = "lm", trControl = train_control_cv, metric = "RMSE")
+
+# Reduced Model
+model_reduced_cv <- train(log(price) ~ ln_sqft + bedrooms + fireplace + waterfront + dom, trimmed_dataset, method = "lm", trControl = train_control_cv, metric = "RMSE")
+
+# Comparision of model performances based on RMSE
+full_rmse <- round(model_full_cv$results[2],2)
+reduce_rmse <- round(model_reduced_cv$results[2],2) 
+
+full_aic <- round(AIC(model_full_cv$finalModel),2)
+reduce_aic <- round(AIC(model_reduced_cv$finalModel),2) 
+```
+
+As per the below table, we can conclude that the full model has a lower RMSE than the reduced model. Hence, the full model performs better as compared to the reduced model when it comes to predicting house prices. Also, the full model has a lower AIC value, which suggests that the full model is a better fit for the data compared to the reduced model.
+
+| Models  | RMSE            | AIC            |
+|---------|-----------------|----------------|
+| Full    | `r full_rmse`   | `r full_aic`   |
+| Reduced | `r reduce_rmse` | `r reduce_aic` |
+
+Scatter Plot shows the relation between the fitted values on the x-axis and the house prices ln(price) on the y-axis. The data points are scattered around a line, showing a positive linear relationship.This implies that the model's predictions are roughly proportional to the actual house prices using natural logarithm.
+
+```{r Multiple Linear Regression Plots,include=T}
+# Set up layout for the plots and adjust the margin
+par(mfrow = c(2, 2),mar = c(5, 5, 2, 2))
+
+# Scatter plot
+plot(predict(model_full_cv), log(trimmed_dataset$price), 
+     xlab = "Fitted Values", ylab = "ln(Price)", 
+     main = "Scatter Plot", col = "midnightblue")
+abline(a = 0, b = 1, col = "tomato",lwd = 2)  # Add reference line
+
+# Residual plot
+plot(predict(model_full_cv), resid(model_full_cv), 
+     xlab = "Fitted Values", ylab = "Residuals", 
+     main = "Residual Plot", col = "steelblue4")
+abline(h = 0, col = "tomato2",lwd = 2)  # Add reference line for zero residuals
+
+# Q-Q plot
+qqnorm(resid(model_full_cv), 
+       xlab = "Expected Values", ylab = "Observed Values", 
+       main = "Q-Q Plot", col = "steelblue2")
+qqline(resid(model_full_cv), col = 'tomato1',lwd = 2)
+
+# Reset par settings to default 
+par(mfrow = c(1, 1))
+```
+
+Residual Plot illustrates that the points are randomly scattered around the zero line, suggesting the model fits the data quite well. But the residuals are slightly spread out with increase in fitted values, suggesting instances where the variance of the residuals may not be constant.
+
+Q-Q Plot represents that the points are mostly mapped with the line and normally distributed. However, there’s slight deviation from the line at both the lower and upper ends of the plot, showing issues with the normality of the residuals.
+
+Overall, the model seems to be relatively accurate in predicting house prices and a good fit for this dataset.
